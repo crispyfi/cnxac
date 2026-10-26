@@ -1,0 +1,27 @@
+# Credentials: never committed (secrets.yaml is the old name)
+credentials.yaml
+secrets.yaml
+.tokens/
+
+# Config folders for lab and customer environments, kept out of the public repo.
+# config/ is its own private git repo.
+lab/
+config/
+cust-lab/
+
+# Design work notes, kept out of the public repo
+work/
+
+# Kept on the maintainer's machine only: agent instructions, the design journal and the tests
+CLAUDE.md
+DESIGN.md
+tests/
+
+# Local run output
+backups/
+.venv/
+__pycache__/
+.pytest_cache/
+
+# macOS folder metadata
+.DS_Store
