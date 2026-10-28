@@ -31,6 +31,11 @@ from .config import EnvConfig
 from .files import Staged, dump_json, dump_yaml, file_name, stage as stage_file, write_staged
 from .live import Live
 
+# What nac/identity-management.json keeps of each UI-made identity object: never a secret
+STORE_FIELDS = ("id", "name", "id-store-type", "microsoft.tenant-id", "microsoft.client-id")
+INTUNE_FIELDS = ("name", "type", "base-url", "oauth2-cc.client-id", "oauth2-cc.token-server-url")
+UEM_FIELDS = ("name", "uem-type", "intune-extension", "enable", "scep-url")
+
 
 @dataclass
 class Report:
@@ -199,6 +204,7 @@ def stage(live: Live, config_dir: Path, env: EnvConfig, everything: bool = False
                                    for v in registry.values_at(obj, path))
 
     nac_dir = config_dir / "nac"
+    auth_profiles: dict[str, dict] = {}   # the auth profiles this pull writes
     for t in registry.NAC_TYPES:
         mine = held.nac.get(t.path, {})
         rep.gone += [held.files[(t.path, oid)] for oid in mine if oid not in live.objects[t.path]]
@@ -224,6 +230,10 @@ def stage(live: Live, config_dir: Path, env: EnvConfig, everything: bool = False
                 stems.add(stem)
                 path = nac_dir / t.path / f"{stem}.json"
             save("nac/", path, dump_json(body), shown_json(t))
+            if t.path == "auth-profiles":
+                auth_profiles[oid] = obj
+    if rep.written["nac/"]:
+        save("nac/", nac_dir / registry.IDENTITY_FILE, dump_json(identity(live, auth_profiles)), shown_json(None))
 
     held_files = {config_dir / f for f in held.files.values()}
     for area in (config_dir / "profiles", nac_dir):
@@ -231,3 +241,32 @@ def stage(live: Live, config_dir: Path, env: EnvConfig, everything: bool = False
             if path not in written and path not in held_files:
                 rep.stale.append(path.relative_to(config_dir).as_posix())
     return rep
+
+
+def _kept(obj: dict, fields: tuple[str, ...]) -> dict:
+    """The listed dotted fields of obj, nested as they are."""
+    out: dict = {}
+    for dotted in fields:
+        value = registry.get_path(obj, dotted)
+        if value is None:
+            continue
+        *parents, last = dotted.split(".")
+        node = out
+        for key in parents:
+            node = node.setdefault(key, {})
+        node[last] = value
+    return out
+
+
+def identity(live: Live, auth_profiles: dict[str, dict]) -> dict:
+    """The identity config made in the UI, for the as-built: identity stores, Intune extensions
+    and the given auth profiles' UEM onboarding. Only the fields listed above are kept, so no
+    secret is. apply never sends it."""
+    stores = [_kept(s, STORE_FIELDS) for s in live.identity_stores.values()]   # Central's own too, for their names
+    onboarding = [{"auth-profile-id": oid, "auth-profile": str(obj.get("name") or oid),
+                   "uem": [_kept(u, UEM_FIELDS) for u in registry.get_path(obj, "eap.uem-providers.uem") or []]}
+                  for oid, obj in auth_profiles.items() if registry.get_path(obj, "eap.uem-providers.uem")]
+    by_name = lambda o: str(o.get("name") or o.get("auth-profile") or "").casefold()
+    return {"identity-stores": sorted(stores, key=by_name),
+            "intune-extensions": sorted((_kept(i, INTUNE_FIELDS) for i in live.intune), key=by_name),
+            "uem-onboarding": sorted(onboarding, key=by_name)}

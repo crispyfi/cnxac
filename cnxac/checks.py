@@ -342,6 +342,9 @@ class _Checker:
             if body.get("auth-type") == "CAPTIVE_PORTAL":
                 self.error(self.d.where("auth-profiles", key),
                            "captive portals aren't supported; delete it in Central, or add it to ignore in env.yaml")
+            if registry.get_path(body, "eap.use-custom-server") is True:
+                self.error(self.d.where("auth-profiles", key),
+                           "a custom EAP server certificate isn't supported; use the default certificate")
             if body.get("auth-type") == "MPSK" and len(networks) != 1:
                 self.error(self.d.where("auth-profiles", key),
                            f"an MPSK auth profile serves exactly one WLAN; it lists {len(networks)}")

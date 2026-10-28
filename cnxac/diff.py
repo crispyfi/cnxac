@@ -9,8 +9,10 @@ MISSING = object()
 # A list of mappings is compared item by item when one of these identifies every item, and each
 # item is labelled by the first readable field it has, else its position, else its place
 ID_KEYS = ("rule-id", "condition-id", "condition-group-id", "profile-id", "policy-id", "server-name",
-           "attr-name", "name", "position")
-LABEL_KEYS = ("rule-name", "name", "server-name", "attr-name", "attr")
+           "attr-name", "name", "profile", "radio-type", "ap-model", "address", "type-process-subcategory",
+           "position")
+LABEL_KEYS = ("rule-name", "name", "server-name", "attr-name", "attr", "profile", "radio-type", "ap-model",
+              "address", "type-process-subcategory")
 
 
 def _same(a: Any, b: Any) -> bool:

@@ -14,7 +14,7 @@ import yaml
 
 TOKEN_URL = "https://sso.common.cloud.hpe.com/as/token.oauth2"
 PLACEHOLDER = "CHANGE_ME"
-ENV_KEYS = {"environment", "protected", "ignore"}
+ENV_KEYS = {"environment", "protected", "ignore", "group_names"}
 
 
 class ConfigError(Exception):
@@ -34,6 +34,7 @@ class EnvConfig:
     name: str                         # the credentials.yaml section
     protected: bool = False
     ignore: tuple[str, ...] = ()
+    group_names: dict[str, str] = field(default_factory=dict)   # Entra group ID -> name, for the as-built
 
     def ignored(self, name: str) -> bool:
         """True if a name matches one of the env's ignore globs."""
@@ -65,13 +66,16 @@ def load_env(config_dir: Path) -> EnvConfig:
     name = data.get("environment")
     protected = data.get("protected", False)
     ignore = data.get("ignore") or []
+    groups = data.get("group_names") or {}
     if not isinstance(name, str) or not name:
         raise ConfigError(f"{path}: environment must name a section of credentials.yaml")
     if not isinstance(protected, bool):
         raise ConfigError(f"{path}: protected must be true or false")
     if not isinstance(ignore, list) or not all(isinstance(g, str) for g in ignore):
         raise ConfigError(f"{path}: ignore must be a list of name globs")
-    return EnvConfig(name, protected, tuple(ignore))
+    if not isinstance(groups, dict) or not all(isinstance(v, str) and v for v in groups.values()):
+        raise ConfigError(f"{path}: group_names must map Entra group IDs to names")
+    return EnvConfig(name, protected, tuple(ignore), {str(k): v for k, v in groups.items()})
 
 
 def credentials_path(config_dir: Path) -> Path | None:

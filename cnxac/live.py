@@ -51,6 +51,7 @@ class Live:
     policy_group: dict | None
     identity_stores: dict[str, dict]
     certificates: set[str] = field(default_factory=set)   # names in the certificate store
+    intune: list[dict] = field(default_factory=list)       # Intune extensions
     defaults: set[tuple[str, str]] = field(default_factory=set)   # (type, name) of Central's factory defaults
     local_aliases: dict[tuple[str, str], dict] = field(default_factory=dict)   # (scope ID, name) -> local copy
 
@@ -181,6 +182,7 @@ def read(client: Client) -> Live:
         policy_group=group if isinstance(group, dict) else None,
         identity_stores={str(s["id"]): s for s in client.get_items("identity-stores", "store") if "id" in s},
         certificates={str(c["name"]) for c in client.get_items("certificate-store", "certificate") if "name" in c},
+        intune=client.get_items("uem-msintune-ext-instances", "uem-msintune-instance"),
         defaults=defaults,
         local_aliases=_local_aliases(client, assignments, scope_maps),
     )

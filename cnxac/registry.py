@@ -12,6 +12,7 @@ from typing import Any
 
 IDENTITY_STORES = "identity-stores"   # reference target: UI-made, checked against Central only
 CERTIFICATES = "certificate-store"    # reference target, by name: uploaded in the UI, checked against Central only
+IDENTITY_FILE = "identity-management.json"   # in nac/: pull's read-only copy of the UI-made identity config
 
 
 def _mpsk_store(obj: dict) -> None:
@@ -64,8 +65,7 @@ TYPES = (
             ("host-address.host-address-alias", "aliases"),
             ("network-address.ip-prefix-alias", "aliases"))) + ((f"{_RULE}.services.net-service", "net-services"),)),
     Type("policy-groups", "policy-group", "", single=True),
-    # 4. layer 2 VLANs and named VLANs
-    Type("layer2-vlan", "l2-vlan", "vlan"),
+    # 4. named VLANs
     Type("named-vlan", "profile", "name"),
     # 5. WLANs
     Type("wlan-ssids", "wlan-ssid", "ssid", generated=("uuid", "auto-default-role"),
@@ -112,7 +112,11 @@ NOT_MANAGED = {
     "ap-port-profiles": "out of scope",
     "passpoint": "out of scope",
     "passpoint-identity": "out of scope",
+    "layer2-vlan": "out of scope",
 }
+
+# Types the tool once managed. A folder's files and assign.yaml entries for them are ignored.
+RETIRED = {"layer2-vlan"}
 
 # Alias types a site can give its own value, as a same-name local copy: type -> the value's path
 ALIAS_VALUES = {"ALIAS_AUTH_SERVER_ADDRESS": "default-value.auth-server-address-value.auth-server-address"}

@@ -41,6 +41,7 @@ class Desired:
     blank: set[tuple[str, str]] = field(default_factory=set)             # (type, ID) of NAC objects whose own ID was empty
     sites: dict[str, dict] | None = None                                 # name -> body for POST sites
     alias_values: dict[str, dict[str, str]] = field(default_factory=dict) # site -> alias name -> its value there
+    identity: dict | None = None                                         # nac/identity-management.json, for the as-built
     issues: list[Issue] = field(default_factory=list)
 
     def error(self, where: str, message: str) -> None:
@@ -90,6 +91,8 @@ def _types(d: Desired, where: str, value: Any) -> dict[str, list[str]]:
     for type_path, names in value.items():
         here = f"{where}.{type_path}"
         t = registry.BY_PATH.get(type_path)
+        if type_path in registry.RETIRED:
+            continue
         if t is None:
             d.error(here, "unknown profile type")
             continue
@@ -153,10 +156,12 @@ def _load_objects(d: Desired, folder: Path, rel: str, types: tuple[registry.Type
         if sub.name.startswith("."):
             continue
         if sub.is_file():
-            if not (rel == "profiles" and sub.name == "policy-groups.json"):
+            if not ((rel, sub.name) in {("profiles", "policy-groups.json"), ("nac", registry.IDENTITY_FILE)}):
                 d.error(f"{rel}/{sub.name}", "unexpected file")
             continue
         t = by_path.get(sub.name)
+        if sub.name in registry.RETIRED:
+            continue
         if t is None or t.single:
             d.error(f"{rel}/{sub.name}/", "unknown type folder")
             continue
@@ -248,5 +253,12 @@ def load(config_dir: Path) -> Desired:
         elif group is not None:
             d.error("profiles/policy-groups.json", "must be an object with a policy-group-list")
     _load_objects(d, config_dir / "nac", "nac", registry.NAC_TYPES, d.nac)
+    identity_path = config_dir / "nac" / registry.IDENTITY_FILE
+    if identity_path.is_file():
+        identity = _read_json(d, identity_path, f"nac/{registry.IDENTITY_FILE}")
+        if isinstance(identity, dict):
+            d.identity = identity
+        elif identity is not None:
+            d.error(f"nac/{registry.IDENTITY_FILE}", "must be a JSON object")
     _load_sites(d, config_dir)
     return d

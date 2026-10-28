@@ -7,7 +7,7 @@ Config as code for HPE Aruba Networking Central (new Central): AP configuration 
 | Area | Types |
 |---|---|
 | Security | auth servers, server groups, aliases, network groups and services, roles, policies and their order |
-| Network | layer 2 VLANs, named VLANs |
+| Network | named VLANs |
 | WLAN and radio | WLANs, radio, wireless IDS/IPS |
 | AP | AP system, AP uplink, NTP, system administration, user administration |
 | Other | App Recognition and Control, certificate usage |
@@ -16,7 +16,7 @@ Config as code for HPE Aruba Networking Central (new Central): AP configuration 
 
 AP profiles are library profiles assigned at Global or at sites for the `CAMPUS_AP` device function. Central NAC objects are assigned at Global, as the UI does.
 
-Not managed: what's set in the UI (see below), certificates, device groups, local profiles (other than sites' alias values), captive portals, site collections, AP port profiles, Passpoint and device-level config.
+Not managed: what's set in the UI (see below), certificates, device groups, local profiles (other than sites' alias values), captive portals, custom EAP server certificates, layer 2 VLANs (APs don't need them), site collections, AP port profiles, Passpoint and device-level config.
 
 ## Install
 
@@ -50,12 +50,13 @@ One folder per Central environment, usually in a private repo:
 ```
 credentials.yaml                      git-ignored; one section per environment
 lab/
-  env.yaml                            which environment, protected flag, ignore list
+  env.yaml                            which environment, protected flag, ignore list, group names
   assign.yaml                         what's assigned at Global and at each site
   sites.yaml                          only where the tool creates the sites
   profiles/<type>/<name>.json         AP library profiles, as the API takes them
   profiles/policy-groups.json         the policy order, for the folder's policies only
   nac/<type>/<name>.json              Central NAC objects, with their IDs
+  nac/identity-management.json        written by pull for the as-built: the UI-made identity config, no secrets
   mpsk/<WLAN>.csv                     named MPSK entries, for cnxac mpsk (no passphrases)
 prod/
   …
@@ -66,6 +67,8 @@ prod/
 environment: prod          # the credentials.yaml section to use
 protected: true            # destroy is refused
 ignore: ["test-*"]         # name globs the tool never touches
+group_names:               # Entra group IDs and their names, for the as-built
+  "00000000-0000-0000-0000-000000000001": SG-Staff
 ```
 
 ```yaml
@@ -137,7 +140,7 @@ Each command acts on the current folder, or the one `-c <folder>` names.
 | `plan` | Runs the checks, compares the files with Central and lists the changes in the order `apply` makes them. Only reads. |
 | `plan --destroy` | Lists what `destroy` would do. Only reads. |
 | `apply` | Shows the plan, asks for `yes`, backs up, makes the changes, then plans again. |
-| `asbuilt` | Writes the files' key settings as a Markdown as-built appendix, under their WebUI locations, to the screen or to the file `-o` names. Offline; refused while `check` finds errors. |
+| `asbuilt` | Writes the files' key settings as a Markdown as-built appendix, under their WebUI locations and labels, to the screen or to the file `-o` names. Offline; refused while `check` finds errors. Identity store names, Intune extensions and UEM onboarding come from `nac/identity-management.json`, and Entra group names from `group_names` in `env.yaml`. |
 | `ids` | Lists the environment's identity stores, Intune extensions and certificates, and the store IDs and certificate names the folder uses, marking any the environment lacks. Also lists the Entra group IDs in authorization conditions, which nothing can look up. Only reads, and never shows a secret. |
 | `destroy` | Removes what the folder describes, sites in `sites.yaml` included, after the environment's name is typed. Refused when `env.yaml` says `protected: true`. |
 
@@ -203,6 +206,8 @@ Some things are set in the UI in each environment, never in files. On update the
 | Management users | Created in the UI, because Central needs the password (user administration). The tool then manages their other settings. |
 | UEM onboarding on an EAP auth profile | Central NAC's PKI for Intune devices (`eap.uem-providers`). Its ID and SCEP URL belong to the environment. |
 | Identity stores and the Intune extension | Referred to by ID from NAC objects; `plan` checks they exist, and `ids` lists them. |
+
+When `pull` writes NAC objects, it also writes `nac/identity-management.json`: the identity stores, the Intune extensions and each EAP auth profile's UEM onboarding, without their secrets. It's there for `asbuilt` only. `plan`, `apply` and `destroy` ignore it, so editing it changes nothing in Central.
 | Certificates | Uploading one in the UI assigns it at Global. Certificate usage profiles and RadSec auth servers refer to it by name, and `plan` checks it exists. |
 
 ## Licence

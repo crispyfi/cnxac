@@ -10,18 +10,19 @@ This repo holds HPE Aruba Networking Central (new Central) AP and Central NAC co
 - **Never rename an MPSK WLAN.** Its auth profile can't follow, so the WLAN and every registered device would have to start again.
 - **Never read or commit `credentials.yaml` or anything under `backups/`.**
 - **Keep files as the API takes them:** plain JSON, no comments, no templating. When unsure of a body's shape, copy an existing file of the same type, or build the object in the UI in a lab and bring it in with `cnxac pull --add <type>`.
-- **The file name is the object's name** (the SSID for a WLAN, the VLAN number for a layer 2 VLAN), with unsafe characters percent-encoded. The name inside the file is what counts.
+- **The file name is the object's name** (the SSID for a WLAN), with unsafe characters percent-encoded. The name inside the file is what counts.
 
 ## Layout
 
 ```
 <folder>/
-  env.yaml                       environment, protected flag, ignore list
+  env.yaml                       environment, protected flag, ignore list, Entra group names
   assign.yaml                    what's assigned at Global and at each site
   sites.yaml                     only where the tool creates the sites
   profiles/<type>/<name>.json    AP library profiles
   profiles/policy-groups.json    the policy order
   nac/<type>/<name>.json         Central NAC objects: auth-profiles, authz-policies
+  nac/identity-management.json   written by pull for the as-built; never edit it
   mpsk/<WLAN>.csv                named MPSK entries: Name,Role,Enabled (Central's import format)
 ```
 
@@ -39,13 +40,14 @@ A site takes one profile of each of those types, so never list two of one type a
 
 ## How to
 
-**Add a VLAN.** Add `profiles/layer2-vlan/<number>.json` and, if WLANs refer to it by name, `profiles/named-vlan/<name>.json`. List both under `global:` in `assign.yaml`.
+**Add a named VLAN.** Add `profiles/named-vlan/<name>.json` and list it under `global:` in `assign.yaml`. A WLAN that gives VLAN numbers in `vlan-id-range` needs nothing more: the tool doesn't manage layer 2 VLANs, which APs don't need.
 
 **Add a role.** Add `profiles/roles/<name>.json`, listing its policies under `policies`. List the role under `global:` in `assign.yaml`. A new policy also needs its own file in `profiles/policies/`, an entry in `profiles/policy-groups.json` with a position no other entry has, and a line in `assign.yaml`.
 
 **Add a WLAN.** Add `profiles/wlan-ssids/<ssid>.json` and list it under `global:` in `assign.yaml`.
 - A Central NAC WLAN sets `cloud-auth: true` and must be in an auth profile's `networks` in `nac/auth-profiles/`. A new enterprise one must not set `primary-auth-server`.
 - An MPSK WLAN gets its own MPSK auth profile, listing only that WLAN.
+- An EAP auth profile uses the default server certificate (`eap.use-custom-server: false`); `check` refuses a custom one.
 - A PSK WLAN is created disabled until someone sets its PSK in the UI.
 
 **Add a device to an MPSK WLAN.** Add a row to `mpsk/<WLAN>.csv`: a name, a role that has its own file, and `TRUE` or `FALSE` for enabled. A person runs `cnxac mpsk add`, and Central generates the passphrase. Changing or removing a row changes nothing in Central; that's done in the UI.
@@ -53,7 +55,7 @@ A site takes one profile of each of those types, so never list two of one type a
 **Add an authorization rule.** Edit the policy in `nac/authz-policies/`:
 - Leave the IDs of the new rule and of each new condition, condition group and enforcement profile empty (`rule-id`, `condition-id`, `condition-group-id`, `profile-id`), and give each new enforcement profile a new `profile-name`.
 - Rule positions must be unique within the policy, and policy positions unique across policies. Gaps are fine.
-- An Entra group condition looks like `{"attr": "Authorization:<identity store ID>:GroupIds", "operator": "OP_CONTAINS_ELEM", "value": "<Entra group ID>"}`. Group IDs come from Entra; there's no lookup by name.
+- An Entra group condition looks like `{"attr": "Authorization:<identity store ID>:GroupIds", "operator": "OP_CONTAINS_ELEM", "value": "<Entra group ID>"}`. Group IDs come from Entra; there's no lookup by name. Add the ID and the group's name under `group_names` in `env.yaml`, so the as-built shows the name.
 - The role a rule gives is an `ATTR_ARUBA_ROLE` enforcement attribute, and the role needs its own file.
 
 **Make the AP uplink check the RADIUS server's certificate** (802.1X on the uplink, `uplink-dot1xsupp`).
