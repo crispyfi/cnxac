@@ -140,7 +140,7 @@ Each command acts on the current folder, or the one `-c <folder>` names.
 | `plan` | Runs the checks, compares the files with Central and lists the changes in the order `apply` makes them. Only reads. |
 | `plan --destroy` | Lists what `destroy` would do. Only reads. |
 | `apply` | Shows the plan, asks for `yes`, backs up, makes the changes, then plans again. |
-| `asbuilt` | Writes the files' key settings as a Markdown as-built appendix, under their WebUI locations and labels, to the screen or to the file `-o` names. Offline; refused while `check` finds errors. Identity store names, Intune extensions and UEM onboarding come from `nac/identity-management.json`, and Entra group names from `group_names` in `env.yaml`. |
+| `asbuilt` | Writes the files' key settings as a Markdown as-built appendix, under their WebUI locations and labels, to the screen or to the file `-o` names. Offline; refused while `check` finds errors. Identity store names, Intune extensions and UEM onboarding come from `nac/identity-management.json`, and Entra group names from `group_names` in `env.yaml`; it warns on the terminal about any it can't name. |
 | `ids` | Lists the environment's identity stores, Intune extensions and certificates, and the store IDs and certificate names the folder uses, marking any the environment lacks. Also lists the Entra group IDs in authorization conditions, which nothing can look up. Only reads, and never shows a secret. |
 | `destroy` | Removes what the folder describes, sites in `sites.yaml` included, after the environment's name is typed. Refused when `env.yaml` says `protected: true`. |
 

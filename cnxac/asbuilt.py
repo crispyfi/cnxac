@@ -15,9 +15,10 @@ from collections.abc import Callable
 from datetime import date
 from typing import Any
 
+from . import ids as identities
 from . import registry
 from .config import EnvConfig
-from .desired import Desired
+from .desired import Desired, Issue
 from .registry import get_path, values_at
 
 NONE = "–"
@@ -790,3 +791,26 @@ SUMMARIES: dict[str, tuple[list[str], Callable[[Appendix, dict], list[str]]]] = 
 
 def render(d: Desired, env: EnvConfig, today: date) -> str:
     return Appendix(d, env).render(today)
+
+
+def notes(d: Desired, env: EnvConfig) -> list[Issue]:
+    """What the as-built can't name: identity stores missing from the identity snapshot (or the
+    whole snapshot), and Entra groups with no name under group_names in env.yaml."""
+    stores, groups = identities.used(d, env)
+    snapshot = f"nac/{registry.IDENTITY_FILE}"
+    out = []
+    if stores and d.identity is None:
+        out.append(Issue("warning", snapshot, "not found, so the as-built names no identity store and leaves out "
+                                              "Identity Management and UEM onboarding; pull writes it"))
+    elif stores:
+        known = {str(s.get("id")) for s in d.identity.get("identity-stores") or []}
+        out += [Issue("warning", files[0], f"identity store {sid} isn't in {snapshot}, so the as-built can't name it; "
+                                           "pull to refresh it")
+                for sid, files in stores.items() if sid not in known]
+    seen = set()
+    for where, gid in groups:
+        if str(gid) not in env.group_names and str(gid) not in seen:
+            seen.add(str(gid))
+            out.append(Issue("warning", where, f"Entra group {gid} has no name under group_names in env.yaml, "
+                                               "so the as-built shows its ID"))
+    return out

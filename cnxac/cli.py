@@ -136,6 +136,7 @@ def asbuilt(
         render.markdown(render.OUT, text)
     else:
         render.written(render.OUT, out, write(out, text))
+    render.issues(render.ERR, asbuilts.notes(d, env))   # on stderr, so a redirected as-built stays clean
 
 
 @app.command()
