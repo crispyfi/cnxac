@@ -171,18 +171,18 @@ scanner-07@site001,SCANNER,FALSE
 A folder proven in one environment (a lab, say) seeds the next (production):
 
 1. **Prove the source:** `plan` shows no changes, `mpsk add` has nothing to add, and the folder is committed.
-2. **Copy** it, leaving out `env.yaml`, `backups/`, and `sites.yaml` if the target's sites already exist. Write the target's `env.yaml` (`protected: true` for production) and add its section to `credentials.yaml`.
+2. **Copy** it, leaving out `env.yaml`, `backups/`, `nac/identity-management.json` and any as-built (both describe the source), and `sites.yaml` if the target's sites already exist. Write the target's `env.yaml` (`protected: true` for production, and `group_names` for the target's Entra groups) and add its section to `credentials.yaml`.
 3. **Rename** anything named differently in the target, such as ESSIDs or a profile prefix: the file name, the name inside it and every reference to it, including `assign.yaml`, the policy order, auth profiles' `networks` and `mpsk/` file names. `check` reports references to a name the folder no longer holds. Do this before the first apply, since an MPSK WLAN can't be renamed later without registering every device again.
 4. **Replace what belongs to the environment:**
    - the NAC objects' own IDs: empty `auth-profile-id` and `policy-id`, and the `rule-id`, `condition-id`, `condition-group-id` and enforcement `profile-id` inside each policy, so `apply` gives the target its own
    - identity store IDs: `cnxac ids` lists the target's stores and marks those the folder uses that the target lacks
-   - Entra group IDs in authorization conditions, if the target has its own tenant. Nothing can check these, so check each by hand.
+   - Entra group IDs in authorization conditions, if the target has its own tenant, and their names under `group_names` in `env.yaml`. Nothing can check these, so check each by hand.
    - auth profiles' `organization-name`
    - certificate names, if the target's were uploaded under other names (`cnxac ids` lists the target's certificates)
    - the `mpsk/` device lists
 5. **In the target's UI,** create the management users the folder lists.
 6. **`check`, then `plan`.** Expect creates and assigns. An update, or a name Central refuses, means the target already holds something by that name; resolve it first.
-7. **`apply`,** then set what's set in the UI (see below) and run `mpsk add`. `plan` should then show no changes. Commit, including the IDs `apply` wrote in.
+7. **`apply`,** then set what's set in the UI (see below) and run `mpsk add`. `plan` should then show no changes. Run `pull` to write the target's `nac/identity-management.json` for `asbuilt`. Commit, including the IDs `apply` wrote in.
 
 ## Safety
 

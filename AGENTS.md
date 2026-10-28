@@ -74,10 +74,10 @@ A site takes one profile of each of those types, so never list two of one type a
 
 ## Copying a folder to another environment
 
-1. Copy the folder, leaving out `backups/`, and change `environment:` in `env.yaml`. Set `protected: true` for production.
+1. Copy the folder, leaving out `backups/`, `nac/identity-management.json` and any as-built, which describe the source, and change `environment:` in `env.yaml`. Set `protected: true` for production.
 2. Delete `sites.yaml` if the sites already exist there.
 3. Rename anything named differently in the target, such as ESSIDs or a profile prefix: the file name, the name inside it and every reference to it, including `assign.yaml`, the policy order, auth profiles' `networks` and `mpsk/` file names. Do this before the first apply, since an MPSK WLAN can't be renamed later.
 4. Empty every NAC object's own IDs in `nac/`: `auth-profile-id`, `policy-id`, and each policy's `rule-id`, `condition-id`, `condition-group-id` and enforcement `profile-id`. Replace the identity store IDs in `nac/` with the target's. `cnxac ids` lists the target's stores and marks the IDs the folder uses that it lacks. Change certificate names too if the target's were uploaded under others; `cnxac ids` lists those as well.
-5. Replace the Entra group IDs in authorization conditions if the target uses a different tenant. Nothing can check these, so check each one by hand.
+5. Replace the Entra group IDs in authorization conditions if the target uses a different tenant, and their names under `group_names` in `env.yaml`. Nothing can check these, so check each one by hand.
 6. Set each auth profile's `organization-name`, and replace the device lists in `mpsk/`.
-7. Run `cnxac check` and `cnxac plan` against the new environment. A person creates the management users in the UI first, then runs `apply` and `mpsk add`.
+7. Run `cnxac check` and `cnxac plan` against the new environment. A person creates the management users in the UI first, then runs `apply` and `mpsk add`. A `cnxac pull` afterwards writes the target's `nac/identity-management.json`.
