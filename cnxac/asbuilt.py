@@ -5,8 +5,8 @@ It renders offline from the files, which match Central whenever plan shows no ch
 type sits under its WebUI location, with the settings the WebUI shows, under its labels, and
 values in words rather than API enums. Everything is assigned at Global unless noted. Object
 IDs, secrets and Central's generated fields never appear, and nor do named MPSK entries.
-Identity stores, Intune extensions and UEM onboarding come from nac/identity-management.json,
-which pull writes.
+Identity stores, Intune extensions (under their own Extensions heading, as in the WebUI) and UEM
+onboarding come from nac/identity-management.json, which pull writes.
 """
 from __future__ import annotations
 
@@ -47,6 +47,7 @@ WEBUI: list[tuple[str, tuple[str, ...]]] = [
     ("auth-profiles", ("Central NAC", "Authentication Profiles")),
     ("authz-policies", ("Central NAC", "Authorization Policies")),
     ("identity", ("Central NAC", "Identity Management")),
+    ("extensions", ("Extensions",)),
     ("sites", ("Sites",)),
 ]
 SHOWN_WITH = {"net-groups": "aliases"}   # the WebUI lists network groups as aliases of type Network Destination
@@ -408,12 +409,15 @@ class Appendix:
             out += ["", f"{level} Identity Stores", "", *table(["Name", "Provider", "Tenant ID", "Client ID"], [
                 [str(s.get("name")), STORE_TYPE(s.get("id-store-type")), text(get_path(s, "microsoft.tenant-id")),
                  text(get_path(s, "microsoft.client-id"))] for s in stores])]
-        if self.extensions:
-            out += ["", f"{level} Extensions", "", *table(["Name", "Type", "URL", "Client ID", "Token Server URL"], [
-                [str(e.get("name")), UEM_TYPE(e.get("type")), text(e.get("base-url")),
-                 text(get_path(e, "oauth2-cc.client-id")), text(get_path(e, "oauth2-cc.token-server-url"))]
-                for e in sorted(self.extensions, key=lambda e: str(e.get("name")).casefold())])]
         return out
+
+    def extensions_table(self, level: str) -> list[str]:
+        if not self.extensions:
+            return []
+        return ["", *table(["Name", "Type", "URL", "Client ID", "Token Server URL"], [
+            [str(e.get("name")), UEM_TYPE(e.get("type")), text(e.get("base-url")),
+             text(get_path(e, "oauth2-cc.client-id")), text(get_path(e, "oauth2-cc.token-server-url"))]
+            for e in sorted(self.extensions, key=lambda e: str(e.get("name")).casefold())])]
 
     def sites(self, level: str) -> list[str]:
         if not self.d.sites:
@@ -771,6 +775,7 @@ SETTINGS: dict[str, Callable[[Appendix, dict], list[str]]] = {
 
 SPECIAL: dict[str, Callable[[Appendix, str], list[str]]] = {
     "policies": Appendix.policies, "authz-policies": Appendix.authz_policies, "identity": Appendix.identity,
+    "extensions": Appendix.extensions_table,
     "sites": Appendix.sites,
 }
 
