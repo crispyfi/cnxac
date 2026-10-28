@@ -86,7 +86,8 @@ def _add(uses: dict[str, list[str]], key: str, where: str) -> None:
 
 def used(d: Desired, env: EnvConfig) -> tuple[dict[str, list[str]], list[tuple[str, str]]]:
     """The store IDs the folder's NAC files use, with the files using each, and the Entra group
-    IDs in authorization conditions, with the file and rule of each."""
+    IDs in authorization conditions, with the file and rule (or the policy's pre-conditions) of
+    each."""
     uses: dict[str, list[str]] = {}
     groups = []
     for t in registry.NAC_TYPES:
@@ -96,8 +97,9 @@ def used(d: Desired, env: EnvConfig) -> tuple[dict[str, list[str]], list[tuple[s
             body, where = registry.strip(t, body)[0], d.where(t.path, key)
             found = [v for path, target in t.refs if target == registry.IDENTITY_STORES
                      for v in registry.values_at(body, path)]
-            for rule in sorted(body.get("rule") or [], key=lambda r: r.get("position", 0)):
-                for c in (rule.get("conditions") or {}).get("condition") or []:
+            rules = sorted(body.get("rule") or [], key=lambda r: r.get("position", 0))
+            for label, part in [("pre-conditions", body), *((f"rule {r.get('rule-name')}", r) for r in rules)]:
+                for c in (part.get("conditions") or {}).get("condition") or []:
                     for g in c.get("condition-group") or []:
                         attr = str(g.get("attr", ""))
                         match = STORE_ATTR.match(attr)
@@ -105,7 +107,7 @@ def used(d: Desired, env: EnvConfig) -> tuple[dict[str, list[str]], list[tuple[s
                             continue
                         found.append(match.group(1))
                         if attr.endswith(GROUP_IDS):
-                            groups += [(f"{where}, rule {rule.get('rule-name')}", v)
+                            groups += [(f"{where}, {label}", v)
                                        for path in ("value", "values[]") for v in registry.values_at(g, path)]
             for sid in found:
                 _add(uses, sid, where)
