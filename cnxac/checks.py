@@ -83,6 +83,7 @@ class _Checker:
         self.wlan_servers()
         self.wlan_bodies()
         self.auth_profiles()
+        self.management_auth()
         if self.live:
             self.against_central()
 
@@ -370,6 +371,12 @@ class _Checker:
             else:
                 self.warn(self.d.where("wlan-ssids", name),
                           "uses Central NAC but isn't in the networks of any auth profile in the files; plan checks Central")
+
+    def management_auth(self) -> None:
+        for key, body in self.profiles.get("local-management", {}).items():
+            if any(registry.values_at(body, f"authentication.authentication-group[].access-group[].{field}")
+                   for field in ("primary-mgmt-auth-server", "backup-mgmt-auth-server")):
+                self.warn(self.d.where("local-management", key), "management auth servers aren't supported")
 
     def one_user_per_role(self) -> None:
         """A scope takes one management user of each role (rolename), so assigning one where

@@ -16,7 +16,7 @@ Config as code for HPE Aruba Networking Central (new Central): AP configuration 
 
 AP profiles are library profiles assigned at Global or at sites for the `CAMPUS_AP` device function. Central NAC objects are assigned at Global, as the UI does.
 
-Not managed: what's set in the UI (see below), certificates, device groups, local profiles (other than sites' alias values), captive portals, custom EAP server certificates, layer 2 VLANs (APs don't need them), site collections, AP port profiles, Passpoint and device-level config.
+Not managed: what's set in the UI (see below), certificates, device groups, local profiles (other than sites' alias values), captive portals, custom EAP server certificates, management auth servers (`check` warns), layer 2 VLANs (APs don't need them), site collections, AP port profiles, Passpoint and device-level config.
 
 ## Install
 
