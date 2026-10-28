@@ -84,9 +84,7 @@ TYPES = (
     Type("ap-system", "profile", "name", one_per_scope=True),
     Type("ap-uplinks", "profile", "name"),
     Type("ntp", "profile", "name", one_per_scope=True, refs=(("servers-alias", "aliases"),)),
-    Type("local-management", "profile", "name", one_per_scope=True, refs=(
-        ("authentication.authentication-group[].access-group[].primary-mgmt-auth-server", "auth-servers"),
-        ("authentication.authentication-group[].access-group[].backup-mgmt-auth-server", "auth-servers"))),
+    Type("local-management", "profile", "name", one_per_scope=True),
     Type("management-users", "user", "name", secrets=("password",), ui_created=True),
     Type("arc", "profile", "name", one_per_scope=True),
     Type("certificate-usage", "profile", "name", one_per_scope=True,
