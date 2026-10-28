@@ -653,7 +653,6 @@ def ap_uplink(a: Appendix, b: dict) -> list[str]:
             ("IEEE 802.1X Authentication", text(on)),
             ("EAP Method", str(dot1x["eapol-method"]).removeprefix("EAP_") if on else NONE),
             ("Certificate Type", enum(dot1x.get("eap-tls-cert-type")) if on else NONE),
-            ("Validate Server Certificate", text(dot1x.get("validate-server-cert")) if on else NONE),
         ]
     return settings(rows)
 
