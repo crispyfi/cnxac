@@ -374,8 +374,8 @@ class _Checker:
 
     def management_auth(self) -> None:
         for key, body in self.profiles.get("local-management", {}).items():
-            if any(registry.values_at(body, f"authentication.authentication-group[].access-group[].{field}")
-                   for field in ("primary-mgmt-auth-server", "backup-mgmt-auth-server")):
+            if any(v for field in ("primary-mgmt-auth-server", "backup-mgmt-auth-server")
+                   for v in registry.values_at(body, f"authentication.authentication-group[].access-group[].{field}")):
                 self.warn(self.d.where("local-management", key), "management auth servers aren't supported")
 
     def one_user_per_role(self) -> None:
