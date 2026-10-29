@@ -77,7 +77,8 @@ TYPES = (
                ("primary-acct-server", "auth-servers"), ("backup-acct-server", "auth-servers"),
                ("default-role", "roles"), ("pre-auth-role", "roles"), ("mac-auth-only-role", "roles"),
                ("machine-auth.machine-only-role", "roles"), ("machine-auth.user-only-role", "roles"),
-               ("vlan-name", "named-vlan"), ("assignment-rules.assignment-rule[].named-vlan", "named-vlan"))),
+               ("vlan-name", "named-vlan"), ("assignment-rules.assignment-rule[].role", "roles"),
+               ("assignment-rules.assignment-rule[].named-vlan", "named-vlan"))),
     # 6. AP settings profiles
     Type("radios", "profile", "name", one_per_scope=True),
     Type("ids", "profile", "name", one_per_scope=True),
