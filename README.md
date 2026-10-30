@@ -85,10 +85,12 @@ sites:
 
 ```yaml
 # sites.yaml
-default_timezone: Europe/London
+default_timezone: Australia/Brisbane
 sites:
-  SITE001: { address: 1 Example Street, city: Town, state: County, country: GB, zipcode: AB1 2CD }
+  SITE001: { address: 1 Example Street, city: Brisbane, state: Queensland, country: Australia, zipcode: "4000" }
 ```
+
+Central checks `country` and `state` against its own lists: give the country's full name, not a code, and a state or region it knows for that country.
 
 - **The folder decides what's managed.** An object is managed when it has a file. Central's other objects are left alone and aren't listed.
 - **Files hold exactly what the API takes and returns.** There's no templating and no variables. File names are object names, with unsafe characters percent-encoded.
