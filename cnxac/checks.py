@@ -27,7 +27,7 @@ def run(d: Desired, env: EnvConfig, live: Live | None = None) -> list[Issue]:
 
 
 def scope_label(kind: str, name: str) -> str:
-    return "Global" if kind == "global" else name
+    return "Global" if kind == "global" else f"collection {name}" if kind == "collection" else name
 
 
 class _Checker:
@@ -278,12 +278,17 @@ class _Checker:
                                       f"{entry['name']}, which stays as it is")
 
     def essids(self) -> None:
-        """No scope gets two enabled WLANs that broadcast the same ESSID."""
+        """No scope gets two enabled WLANs that broadcast the same ESSID. A site gets its
+        collection's too, when Central says which that is."""
         wlans = self.profiles.get("wlan-ssids", {})
         top = set(self.d.assign["global"].get("wlan-ssids", []))
+        collections = {name: set(types.get("wlan-ssids", [])) for name, types in self.d.assign["collections"].items()}
         contexts = {"Global": top}
+        for name, names in collections.items():
+            contexts[scope_label("collection", name)] = top | names
         for site, types in self.d.assign["sites"].items():
-            contexts[site] = top | set(types.get("wlan-ssids", []))
+            collection = self.live.collection_of.get(site) if self.live else None
+            contexts[site] = top | collections.get(collection, set()) | set(types.get("wlan-ssids", []))
         seen = set()
         for context, names in contexts.items():
             by_essid = defaultdict(list)
@@ -433,6 +438,9 @@ class _Checker:
         for site in sorted(self.d.assign["sites"]):
             if site not in live.site_ids and site not in (self.d.sites or {}):
                 self.error("assign.yaml", f"site {site} isn't in Central or in sites.yaml")
+        for name in sorted(self.d.assign["collections"]):
+            if name not in live.collection_ids:
+                self.error("assign.yaml", f"site collection {name} isn't in Central; make it in the UI")
         live_sites = {s["scopeName"]: s for s in live.sites}
         for name, body in (self.d.sites or {}).items():
             current = live_sites.get(name)

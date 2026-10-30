@@ -274,12 +274,13 @@ class Appendix:
         return str(body.get("name") if t.nac else body.get(t.id_field) or body.get("name"))
 
     def scopes(self, type_path: str, name: str) -> str:
-        """Where the object is assigned: Global and the sites, or Not assigned."""
+        """Where the object is assigned: Global, the site collections and the sites, or Not assigned."""
         if registry.BY_PATH[type_path].nac:
             return "Global"
         found = {(kind, scope) for kind, scope, t, n in self.assigned if (t, n) == (type_path, name)}
+        collections = sorted(f"{s} (site collection)" for kind, s in found if kind == "collection")
         sites = sorted(s for kind, s in found if kind == "site")
-        out = (["Global"] if ("global", "") in found else []) + sites
+        out = (["Global"] if ("global", "") in found else []) + collections + sites
         return ", ".join(out) if out else "Not assigned"
 
     def assigned_line(self, type_path: str, name: str) -> str:

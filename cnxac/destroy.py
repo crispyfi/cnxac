@@ -17,6 +17,7 @@ from __future__ import annotations
 from collections import defaultdict
 
 from . import registry
+from .checks import scope_label
 from .config import EnvConfig
 from .desired import Desired, Issue
 from .live import AP, NAC, Live
@@ -140,9 +141,9 @@ class _Destroyer:
             return {(a[0], a[1], *u) for u in used_by.get(a[2:], ())}
 
         def key(a: tuple[str, str, str, str]) -> tuple:
-            return -registry.ORDER[a[2]], KINDS.get(a[0], 2), a[1], self.name(a[2:])
+            return -registry.ORDER[a[2]], KINDS.get(a[0], len(KINDS)), a[1], self.name(a[2:])
         for a in users_first(rows, users_at, key):
-            where = self.live.label(a[1]) if a[0] == "id" else ("Global" if a[0] == "global" else a[1])
+            where = self.live.label(a[1]) if a[0] == "id" else scope_label(a[0], a[1])
             self.add(UNASSIGN, "unassign", f"{self.label(a[2:])} from {where}", op=("assignment", *a))
 
     def entries(self, going: set[Obj]) -> None:

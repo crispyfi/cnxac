@@ -32,7 +32,7 @@ class Issue:
 
 @dataclass
 class Desired:
-    assign: dict = field(default_factory=lambda: {"global": {}, "sites": {}})
+    assign: dict = field(default_factory=lambda: {"global": {}, "collections": {}, "sites": {}})
     profiles: dict[str, dict[str, dict]] = field(default_factory=dict)   # type -> name -> body
     policy_group: dict | None = None
     nac: dict[str, dict[str, dict]] = field(default_factory=dict)        # type -> ID -> body
@@ -58,9 +58,10 @@ class Desired:
         out = set()
         for type_path, names in self.assign["global"].items():
             out |= {("global", "", type_path, n) for n in names}
-        for site, types in self.assign["sites"].items():
-            for type_path, names in types.items():
-                out |= {("site", site, type_path, n) for n in names}
+        for kind, section in (("collection", "collections"), ("site", "sites")):
+            for scope, types in self.assign[section].items():
+                for type_path, names in types.items():
+                    out |= {(kind, scope, type_path, n) for n in names}
         return out
 
 
@@ -126,13 +127,23 @@ def _load_assign(d: Desired, config_dir: Path) -> None:
     if not isinstance(data, dict):
         d.error("assign.yaml", "must be a mapping")
         return
-    for key in sorted(set(data) - {"global", "sites"}):
-        d.error(f"assign.yaml: {key}", "unknown section; use global or sites")
+    for key in sorted(set(data) - {"global", "collections", "sites"}):
+        d.error(f"assign.yaml: {key}", "unknown section; use global, collections or sites")
     top = data.get("global")
     if isinstance(top, dict) and "alias-values" in top:
         d.error("assign.yaml: global.alias-values", "only sites take alias values; Global gets the alias's own value")
         top = {k: v for k, v in top.items() if k != "alias-values"}
     d.assign["global"] = _types(d, "assign.yaml: global", top)
+    collections = data.get("collections") or {}
+    if not isinstance(collections, dict):
+        d.error("assign.yaml: collections", "must map site collection names to their profiles")
+        collections = {}
+    for name, types in collections.items():
+        here = f"assign.yaml: collections.{name}"
+        if isinstance(types, dict) and "alias-values" in types:
+            d.error(f"{here}.alias-values", "only sites take alias values")
+            types = {k: v for k, v in types.items() if k != "alias-values"}
+        d.assign["collections"][str(name)] = _types(d, here, types)
     sites = data.get("sites") or {}
     if not isinstance(sites, dict):
         d.error("assign.yaml: sites", "must map site names to their profiles")

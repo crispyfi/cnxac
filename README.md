@@ -14,9 +14,9 @@ Config as code for HPE Aruba Networking Central (new Central): AP configuration 
 | Central NAC | auth profiles, authorization policies |
 | Scopes | sites, only in an environment that lists them in `sites.yaml` |
 
-AP profiles are library profiles assigned at Global or at sites for the `CAMPUS_AP` device function. Central NAC objects are assigned at Global, as the UI does.
+AP profiles are library profiles assigned at Global, at site collections or at sites for the `CAMPUS_AP` device function. Central NAC objects are assigned at Global, as the UI does.
 
-Not managed: what's set in the UI (see below), certificates, device groups, local profiles (other than sites' alias values), captive portals, custom EAP server certificates, management auth servers (`check` warns), layer 2 VLANs (APs don't need them), site collections, AP port profiles, Passpoint and device-level config.
+Not managed: what's set in the UI (see below), certificates, device groups, local profiles (other than sites' alias values), captive portals, custom EAP server certificates, management auth servers (`check` warns), layer 2 VLANs (APs don't need them), site collections themselves and which sites are in them (profiles can be assigned at them), AP port profiles, Passpoint and device-level config.
 
 ## Install
 
@@ -51,7 +51,7 @@ One folder per Central environment, usually in a private repo:
 credentials.yaml                      git-ignored; one section per environment
 lab/
   env.yaml                            which environment, protected flag, ignore list, group names
-  assign.yaml                         what's assigned at Global and at each site
+  assign.yaml                         what's assigned at Global, at each site collection and at each site
   sites.yaml                          only where the tool creates the sites
   profiles/<type>/<name>.json         AP library profiles, as the API takes them
   profiles/policy-groups.json         the policy order, for the folder's policies only
@@ -76,9 +76,12 @@ group_names:               # Entra group IDs and their names, for the as-built
 global:
   wlan-ssids: [STAFF, IOT, GUEST]
   radios: [rf-default]
+collections:
+  NO-DFS:
+    radios: [rf-no-dfs]                  # replaces Global's at the collection's sites
 sites:
   SITE014:
-    radios: [rf-high-density]            # replaces Global's at this site
+    radios: [rf-high-density]            # replaces its collection's, or Global's
     alias-values:
       acct-server: 10.14.0.1             # this site's own value for the alias
 ```
@@ -94,7 +97,8 @@ Central checks `country` and `state` against its own lists: give the country's f
 
 - **The folder decides what's managed.** An object is managed when it has a file. Central's other objects are left alone and aren't listed.
 - **Files hold exactly what the API takes and returns.** There's no templating and no variables. File names are object names, with unsafe characters percent-encoded.
-- **A settings profile at a site replaces Global's;** WLANs add to Global's. NAC objects aren't listed in `assign.yaml`.
+- **A settings profile at a site replaces its collection's, and one at a collection replaces Global's;** WLANs add to them. NAC objects aren't listed in `assign.yaml`.
+- **Site collections are made in the UI,** with their sites; `assign.yaml` names them, and `plan` reports one Central doesn't have. They take no alias values. When a site's profile moves to its collection, `apply` assigns it at the collection before taking it off the site.
 - **A site can have its own value for an Auth Server Address alias,** under `alias-values`. The tool writes it as a same-name local copy of the alias at the site: the only local profile it writes.
 - **Central NAC objects are keyed by a UUID.** A new object leaves it empty (`""`), and `apply` chooses one and writes it into the file. Commit the file afterwards.
 

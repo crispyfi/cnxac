@@ -341,9 +341,10 @@ class _Applier:
         return None
 
     def scope_id(self, kind: str, name: str) -> str:
-        if kind == "id":   # a scope that's neither Global nor a site, by its ID
+        if kind == "id":   # a scope that's not Global, a site collection or a site, by its ID
             return name
-        sid = self.live.global_id if kind == "global" else self.site_ids.get(name)
+        sid = (self.live.global_id if kind == "global" else self.live.collection_ids.get(name) if kind == "collection"
+               else self.site_ids.get(name))
         if sid is None:
             raise ApplyError(f"no scope ID for {name or 'Global'}")
         return sid

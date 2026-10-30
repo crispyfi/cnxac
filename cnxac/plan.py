@@ -20,8 +20,16 @@ from .live import Live, derived_roles_of
 # Steps after the object types, in apply order. Authorization policies in the way of another's
 # new position move just before their updates.
 MOVES = registry.ORDER["authz-policies"] - 0.5
-SITES, VALUES_GO, UNASSIGN, ASSIGN, VALUES = (len(registry.TYPES) + i for i in range(5))
-KINDS = {"global": 0, "site": 1}
+SITES, VALUES_GO = len(registry.TYPES), len(registry.TYPES) + 1
+KINDS = {"global": 0, "collection": 1, "site": 2}
+VALUES = VALUES_GO + 2 * len(KINDS) + 1
+
+
+def assignment_step(kind: str, verb: str) -> int:
+    """Assignments go scope by scope, broadest first, unassigns before assigns at each. A
+    narrower scope's own profile then stays until the broader scope has its replacement, e.g.
+    when sites' profile moves to their collection."""
+    return VALUES_GO + 1 + 2 * KINDS[kind] + (verb == "assign")
 
 
 @dataclass
@@ -198,7 +206,8 @@ class _Planner:
         assigned = any(r.get("profile-type") == "policy-groups" and r.get("device-function") == "CAMPUS_AP"
                        and str(r["scope-id"]) == self.live.global_id for r in self.live.assignments)
         if not assigned:
-            self.add(ASSIGN, "assign", "policy order at Global", op=("assignment", "global", "", "policy-groups", ""))
+            self.add(assignment_step("global", "assign"), "assign", "policy order at Global",
+                     op=("assignment", "global", "", "policy-groups", ""))
 
     def sites(self) -> None:
         for name, body in (self.d.sites or {}).items():
@@ -236,9 +245,9 @@ class _Planner:
         # Only the assignments of profiles the folder holds; Central's others are left alone
         live = {a for a in self.live.classify(self.env).managed if a[3] in self.d.profiles.get(a[2], {})}
         want = {a for a in self.d.assigned() if not self.env.ignored(a[3])}
-        # Unassigns run first, because a scope takes one settings profile of each type, and each
-        # before what it uses. One that something staying at the same scope uses stays too:
-        # Central may have assigned it with that object, and would refuse or break without it.
+        # At each scope unassigns run first, because a scope takes one settings profile of each
+        # type, and each before what it uses. One that something staying at the same scope uses
+        # stays too: Central may have assigned it with that object, and would refuse or break without it.
         users = self.live.users()
 
         def users_at(a: tuple[str, str, str, str]) -> set[tuple[str, str, str, str]]:
@@ -254,13 +263,15 @@ class _Planner:
             using = ", ".join(f"{t}/{n}" for _, _, t, n in sorted(kept[a]))
             self.plan.kept.append(f"{a[2]}/{a[3]} at {scope_label(a[0], a[1])}, used by {using}")
         for a in users_first(going, users_at, key):
-            self.add(UNASSIGN, "unassign", f"{a[2]}/{a[3]} from {scope_label(a[0], a[1])}", op=("assignment", *a))
+            self.add(assignment_step(a[0], "unassign"), "unassign", f"{a[2]}/{a[3]} from {scope_label(a[0], a[1])}",
+                     op=("assignment", *a))
         for a in sorted(want - live, key=key):
-            self.add(ASSIGN, "assign", f"{a[2]}/{a[3]} at {scope_label(a[0], a[1])}", op=("assignment", *a))
+            self.add(assignment_step(a[0], "assign"), "assign", f"{a[2]}/{a[3]} at {scope_label(a[0], a[1])}",
+                     op=("assignment", *a))
         nac_live = self.live.nac_assigned()
         for t in registry.NAC_TYPES:   # as the UI does, every NAC object is assigned at Global
             for key_, body in self.d.nac.get(t.path, {}).items():
                 name = str(body.get("name") or key_)
                 if self.managed(t, name) and (t.path, key_) not in nac_live:
-                    self.add(ASSIGN, "assign", f"{t.path}/{name} at Global (Central NAC)",
+                    self.add(assignment_step("global", "assign"), "assign", f"{t.path}/{name} at Global (Central NAC)",
                              op=("assignment", "global", "", t.path, key_))

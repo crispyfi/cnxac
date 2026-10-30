@@ -54,16 +54,22 @@ class Live:
     intune: list[dict] = field(default_factory=list)       # Intune extensions
     defaults: set[tuple[str, str]] = field(default_factory=set)   # (type, name) of Central's factory defaults
     local_aliases: dict[tuple[str, str], dict] = field(default_factory=dict)   # (scope ID, name) -> local copy
+    collections: list[dict] = field(default_factory=list)   # site collections
 
     def __post_init__(self) -> None:
         self.global_id = next((str(r["scope-id"]) for r in self.assignments if r.get("scope-type") == "GLOBAL"), None)
         self.site_names = {str(s["scopeId"]): s["scopeName"] for s in self.sites}
         self.site_ids = {name: sid for sid, name in self.site_names.items()}
+        self.collection_names = {str(c["scopeId"]): c["scopeName"] for c in self.collections}
+        self.collection_ids = {name: cid for cid, name in self.collection_names.items()}
+        self.collection_of = {s["scopeName"]: s["collectionName"] for s in self.sites if s.get("collectionName")}
         self.derived_roles = derived_roles_of(list(self.objects.get("wlan-ssids", {}).values()))
 
     def label(self, sid: str) -> str:
         if sid == self.global_id:
             return "Global"
+        if sid in self.collection_names:
+            return f"collection {self.collection_names[sid]}"
         return self.site_names.get(sid, f"scope {sid}")
 
     def scope_of(self, sid: str) -> tuple[str, str] | None:
@@ -71,6 +77,8 @@ class Live:
             return ("global", "")
         if sid in self.site_names:
             return ("site", self.site_names[sid])
+        if sid in self.collection_names:
+            return ("collection", self.collection_names[sid])
         return None
 
     def skip(self, type_path: str, name: str, env: EnvConfig) -> str | None:
@@ -185,6 +193,7 @@ def read(client: Client) -> Live:
         intune=client.get_items("uem-msintune-ext-instances", "uem-msintune-instance"),
         defaults=defaults,
         local_aliases=_local_aliases(client, assignments, scope_maps),
+        collections=client.get_paged("site-collections"),
     )
 
 

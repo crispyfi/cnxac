@@ -17,7 +17,7 @@ This repo holds HPE Aruba Networking Central (new Central) AP and Central NAC co
 ```
 <folder>/
   env.yaml                       environment, protected flag, ignore list, Entra group names
-  assign.yaml                    what's assigned at Global and at each site
+  assign.yaml                    what's assigned at Global, at each site collection and at each site
   sites.yaml                     only where the tool creates the sites
   profiles/<type>/<name>.json    AP library profiles
   profiles/policy-groups.json    the policy order
@@ -33,10 +33,11 @@ An object is managed only while it has a file. Deleting a file leaves the object
 | A site needs… | Do this |
 |---|---|
 | a different radio, AP system, IDS, ARC, NTP, system administration or certificate usage profile | add the profile's file and list it under the site in `assign.yaml`; it replaces Global's there |
+| a different radio, AP system, IDS, ARC, NTP, system administration or certificate usage profile, shared with other sites | if the sites are in one site collection (made in the UI), list the profile under the collection in `collections:` instead; a site's own profile still replaces the collection's |
 | its own value for an alias (Auth Server Address type only), e.g. its RADIUS accounting server | add the value under the site's `alias-values` in `assign.yaml`; the alias itself is listed under `global:` |
 | a different WLAN setting | not possible: every site gets the same WLAN settings |
 
-A site takes one profile of each of those types, so never list two of one type at the same site.
+A site or site collection takes one profile of each of those types, so never list two of one type at the same one. Site collections take no `alias-values`.
 
 ## How to
 

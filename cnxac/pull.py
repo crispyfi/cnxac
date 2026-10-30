@@ -61,7 +61,8 @@ class Report:
             ("Local profiles, not pulled (turn them into library profiles)", self.local),
             ("Assigned but not managed by cnx-as-code", self.unmanaged),
             ("Assigned, but not in Central's library", self.not_found),
-            ("Assigned at a scope that isn't Global or a site (e.g. a site collection)", self.unknown_scopes),
+            ("Assigned at a scope that isn't Global, a site collection or a site (e.g. a device group)",
+             self.unknown_scopes),
             ("Secret-like fields left out (list each in the registry as secret or not)", self.secret_like),
             ("Duplicate names (the file name has the ID appended)", self.duplicates),
             ("Files this pull didn't write (left in place)", self.stale),
@@ -157,6 +158,9 @@ def stage(live: Live, config_dir: Path, env: EnvConfig, everything: bool = False
             if not live.skip("aliases", name, env) and registry.is_value_copy(library, local):
                 values[site][name] = registry.alias_value(local)
     assign: dict = {"global": block(scopes[("global", "")])}
+    collections = sorted({s for k, s in scopes if k == "collection"}, key=name_key)
+    if collections:
+        assign["collections"] = {c: block(scopes[("collection", c)]) for c in collections}
     sites = sorted({s for k, s in scopes if k == "site"} | values.keys(), key=name_key)
     if sites:
         assign["sites"] = {s: {**block(scopes[("site", s)]),
